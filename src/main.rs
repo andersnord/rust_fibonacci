@@ -7,6 +7,20 @@ struct Player {
     y: f32
 }
 
+impl Player {
+    fn new(health: i32, x: f32, y: f32) -> Player {
+        Player {
+            health: health,
+            x: x,
+            y: y
+        }
+    }
+    
+    fn handle_input(&self) {
+        
+    }   
+}
+
 
 fn main() {
     use glium::{DisplayBuild, Surface};
@@ -26,6 +40,9 @@ fn main() {
 
     let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
+    
+    //Create player
+    let mut player = Player::new (10, 0.0, 0.0);
 
     let vertex_shader_src = r#"
         #version 140
@@ -62,9 +79,8 @@ fn main() {
         // PSEUDO
         // get input
         // update player position according to input
-        // 
         
-        //handle_input();
+        player.handle_input();
         
         // we update `t`
         update_position(&mut t);
