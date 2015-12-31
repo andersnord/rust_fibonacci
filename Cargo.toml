@@ -1,0 +1,7 @@
+[package]
+name = "glium_test"
+version = "0.1.0"
+authors = ["Anders Nord <nandersnord@gmail.com>"]
+
+[dependencies]
+glium = "*"
