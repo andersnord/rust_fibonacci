@@ -1,48 +1,105 @@
+// TODO:
+// Update Line w direction o vilken nr det är så man vet längd.
+
 #[macro_use]
 extern crate glium;
 
-struct Player {
-    health: i32,
-    x: f32,
-    y: f32
+enum Direction {
+    Left,
+    Up,
+    Right,
+    Down    
 }
 
-impl Player {
-    fn new(health: i32, x: f32, y: f32) -> Player {
-        Player {
-            health: health,
-            x: x,
-            y: y
+#[derive(Copy, Clone)]
+struct Vertex {
+    position: [f32; 2],
+}
+
+struct Line {
+    length: f32,
+    start_x: f32,
+    start_y: f32,
+    direction: Direction,
+    verticies: Vec<Vertex>,
+    transformation_matrix: [[f32; 4]; 4]
+}
+
+impl Line {
+    fn new(length: f32, start_x: f32, start_y: f32, direction: Direction, verticies: Vec<Vertex>, transformation_matrix: [[f32; 4]; 4] ) -> Line {
+        Line {
+            length: length,
+            start_x: start_x,
+            start_y: start_y,
+            direction: direction,
+            verticies: verticies,
+            transformation_matrix: transformation_matrix
         }
     }
-    
-    fn handle_input(&self) {
-        
-    }   
-}
+   
+    fn update(&mut self) {
+        // PSEUDO
+        // Update length of "Current line"
+        // Update matrix
+        // Check direction of the line
+        // Check length if long enough for starting new line
+        // Create new line if yes and make that one the current line
 
+        self.length += 0.0002;
+        self.update_matrix();
+    }   
+    
+    fn update_matrix(&mut self)
+    {
+        match self.direction {
+            Direction::Left => 
+                self.transformation_matrix = [
+                    [-self.length, 0.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ],
+            Direction::Up => 
+                self.transformation_matrix = [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, self.length, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ], 
+            Direction::Right => 
+                self.transformation_matrix = [
+                    [self.length, 0.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ],
+            Direction::Down => 
+                self.transformation_matrix = [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, -self.length, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ],
+        }
+    }
+}
 
 fn main() {
     use glium::{DisplayBuild, Surface};
     let display =glium:: glutin::WindowBuilder::new().build_glium().unwrap();
 
-    #[derive(Copy, Clone)]
-    struct Vertex {
-        position: [f32; 2],
-    }
+
 
     implement_vertex!(Vertex, position);
 
-    let vertex1 = Vertex { position: [-0.1, -0.1] };
-    let vertex2 = Vertex { position: [ 0.0,  0.1] };
-    let vertex3 = Vertex { position: [ 0.1, -0.1] };
-    let shape = vec![vertex1, vertex2, vertex3];
+    let vertex1 = Vertex { position: [ 0.0,  0.1] };
+    let vertex2 = Vertex { position: [ 0.0,  0.0] };
+    let vertex3 = Vertex { position: [ 0.1,  0.1] };
+    let vertex4 = Vertex { position: [ 0.1,  0.0] };
+    let shape = vec![vertex1, vertex2, vertex3, vertex4];
 
     let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
-    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
-    
-    //Create player
-    let mut player = Player::new (10, 0.0, 0.0);
+    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TriangleStrip);
 
     let vertex_shader_src = r#"
         #version 140
@@ -69,49 +126,35 @@ fn main() {
         }
     "#;
 
-    let program = glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
+    let program = glium::Program::from_source(
+        &display, 
+        vertex_shader_src, 
+        fragment_shader_src, 
+        None)
+        .unwrap();
+    
+    let matrix = [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ];
 
-    let mut t = -0.5;
+    let mut first_line = Line::new(0.0, 0.0, 0.0, Direction::Down, shape, matrix);
 
     // Main game loop
     loop {
-        
-        // PSEUDO
-        // get input
-        // update player position according to input
-        
-        player.handle_input();
-        
+        first_line.update();
+                
         // we update `t`
-        update_position(&mut t);
-
+        //update_position(&mut t);
+        
+        let uniforms = uniform! {
+            matrix: first_line.transformation_matrix
+        };
+            
         let mut target = display.draw();
         target.clear_color(1.0, 1.0, 1.0, 1.0);
-
-        let uniforms = uniform! {
-            matrix: [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [ t , t, 0.0, 1.0f32],
-            ]
-        };
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         target.draw(&vertex_buffer, &indices, &program, &uniforms, &Default::default()).unwrap();
         target.finish().unwrap();
 
@@ -125,9 +168,9 @@ fn main() {
     }
 }
 
-fn update_position(t: &mut f32) -> () {
-    *t += 0.00002;
-    if *t > 0.5 {
-        *t = -0.5;
-    }
-}
+// fn update_position(t: &mut f32) -> () {
+//     *t += 0.00002;
+//     if *t > 0.5 {
+//         *t = -0.5;
+//     }
+// }
