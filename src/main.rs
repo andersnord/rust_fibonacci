@@ -45,7 +45,7 @@ impl Line {
         // Check length if long enough for starting new line
         // Create new line if yes and make that one the current line
 
-        self.length += 0.0002;
+        self.length += 0.0002; //TODO: use timer
         self.update_matrix();
     }   
     
@@ -57,28 +57,28 @@ impl Line {
                     [-self.length, 0.0, 0.0, 0.0],
                     [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
+                    [self.start_x, self.start_y, 0.0, 1.0],
                 ],
             Direction::Up => 
                 self.transformation_matrix = [
                     [1.0, 0.0, 0.0, 0.0],
                     [0.0, self.length, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
+                    [self.start_x, self.start_y, 0.0, 1.0],
                 ], 
             Direction::Right => 
                 self.transformation_matrix = [
                     [self.length, 0.0, 0.0, 0.0],
                     [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
+                    [self.start_x, self.start_y, 0.0, 1.0],
                 ],
             Direction::Down => 
                 self.transformation_matrix = [
                     [1.0, 0.0, 0.0, 0.0],
                     [0.0, -self.length, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
+                    [self.start_x, self.start_y, 0.0, 1.0],
                 ],
         }
     }
@@ -87,8 +87,6 @@ impl Line {
 fn main() {
     use glium::{DisplayBuild, Surface};
     let display =glium:: glutin::WindowBuilder::new().build_glium().unwrap();
-
-
 
     implement_vertex!(Vertex, position);
 
@@ -140,23 +138,36 @@ fn main() {
             [0.0, 0.0, 0.0, 1.0],
         ];
 
-    let mut first_line = Line::new(0.0, 0.0, 0.0, Direction::Down, shape, matrix);
+    let mut first_line = Line::new(0.0, 0.0, 0.0, Direction::Up, shape, matrix);
+    
+    let mut lines = vec![ first_line ];
 
     // Main game loop
     loop {
-        first_line.update();
-                
-        // we update `t`
-        //update_position(&mut t);
-        
-        let uniforms = uniform! {
-            matrix: first_line.transformation_matrix
-        };
-            
         let mut target = display.draw();
         target.clear_color(1.0, 1.0, 1.0, 1.0);
-        target.draw(&vertex_buffer, &indices, &program, &uniforms, &Default::default()).unwrap();
+        
+        // Update latest added line
+        let top_index = lines.len() - 1;
+        lines[ top_index ].update();
+
+        // Draw all lines
+        for line in &mut lines {
+            let uniforms = uniform! {
+                matrix: line.transformation_matrix
+            };
+             
+            target.draw(&vertex_buffer, &indices, &program, &uniforms, &Default::default()).unwrap();
+        }
+        
         target.finish().unwrap();
+
+        //Check top line length and if new one is to be added
+        if lines[ top_index ].length > 5.5 {
+            let mut new_line = Line::new(0.0, 0.0, 0.0, Direction::Left, lines[ top_index ].verticies.clone(), matrix);
+            lines.push(new_line)
+        }
+
 
         // Check for closed window event.
         for ev in display.poll_events() {
@@ -167,10 +178,3 @@ fn main() {
         }
     }
 }
-
-// fn update_position(t: &mut f32) -> () {
-//     *t += 0.00002;
-//     if *t > 0.5 {
-//         *t = -0.5;
-//     }
-// }
