@@ -138,8 +138,10 @@ fn main() {
             [0.0, 0.0, 0.0, 1.0],
         ];
 
-    let mut first_line = Line::new(0.0, 0.0, 0.0, Direction::Up, shape, matrix);
-    
+    // Set the first forbornacci stuff
+    let mut length = 1.0;
+    let mut direction = Direction::Down;
+    let first_line = Line::new(0.0, 0.0, 0.0, direction, shape, matrix);
     let mut lines = vec![ first_line ];
 
     // Main game loop
@@ -162,12 +164,22 @@ fn main() {
         
         target.finish().unwrap();
 
+      
+
+
+
         //Check top line length and if new one is to be added
-        if lines[ top_index ].length > 5.5 {
-            let mut new_line = Line::new(0.0, 0.0, 0.0, Direction::Left, lines[ top_index ].verticies.clone(), matrix);
+        if lines[ top_index ].length > length {
+            // Calculate forbornacci stuff
+            length = lines[ top_index ].length * 1.2; // TODO: Use 2 latest lenghts instead
+            
+            // Choose new direction
+            direction = select_new_direction(&mut lines[ top_index ].direction);
+   
+            
+            let new_line = Line::new(0.0, 0.0, 0.0, direction, lines[ top_index ].verticies.clone(), matrix);
             lines.push(new_line)
         }
-
 
         // Check for closed window event.
         for ev in display.poll_events() {
@@ -176,5 +188,18 @@ fn main() {
                 _ => ()
             }
         }
+    }
+}
+
+fn select_new_direction(direction: &mut Direction) -> Direction {
+    match *direction {
+        Direction::Left => 
+                return Direction::Down,
+        Direction::Up => 
+            return Direction::Left,
+        Direction::Right => 
+            return Direction::Up,
+        Direction::Down => 
+            return Direction::Right,
     }
 }
