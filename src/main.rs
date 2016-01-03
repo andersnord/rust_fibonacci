@@ -17,7 +17,8 @@ struct Vertex {
 }
 
 struct Line {
-    length: f32,
+    current_length: f32,
+    final_length: f32,
     start_x: f32,
     start_y: f32,
     direction: Direction,
@@ -26,9 +27,10 @@ struct Line {
 }
 
 impl Line {
-    fn new(length: f32, start_x: f32, start_y: f32, direction: Direction, verticies: Vec<Vertex>, transformation_matrix: [[f32; 4]; 4] ) -> Line {
+    fn new(current_length: f32, final_length: f32, start_x: f32, start_y: f32, direction: Direction, verticies: Vec<Vertex>, transformation_matrix: [[f32; 4]; 4] ) -> Line {
         Line {
-            length: length,
+            current_length: current_length,
+            final_length: final_length,
             start_x: start_x,
             start_y: start_y,
             direction: direction,
@@ -39,13 +41,13 @@ impl Line {
    
     fn update(&mut self) {
         // PSEUDO
-        // Update length of "Current line"
+        // Update current_length of "Current line"
         // Update matrix
         // Check direction of the line
-        // Check length if long enough for starting new line
+        // Check current_length if long enough for starting new line
         // Create new line if yes and make that one the current line
 
-        self.length += 0.0002; //TODO: use timer
+        self.current_length += 0.0008; //TODO: use timer
         self.update_matrix();
     }   
     
@@ -54,7 +56,7 @@ impl Line {
         match self.direction {
             Direction::Left => 
                 self.transformation_matrix = [
-                    [-self.length, 0.0, 0.0, 0.0],
+                    [-self.current_length, 0.0, 0.0, 0.0],
                     [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 0.0],
                     [self.start_x, self.start_y, 0.0, 1.0],
@@ -62,13 +64,13 @@ impl Line {
             Direction::Up => 
                 self.transformation_matrix = [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, self.length, 0.0, 0.0],
+                    [0.0, self.current_length, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 0.0],
                     [self.start_x, self.start_y, 0.0, 1.0],
                 ], 
             Direction::Right => 
                 self.transformation_matrix = [
-                    [self.length, 0.0, 0.0, 0.0],
+                    [self.current_length, 0.0, 0.0, 0.0],
                     [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 0.0],
                     [self.start_x, self.start_y, 0.0, 1.0],
@@ -76,7 +78,7 @@ impl Line {
             Direction::Down => 
                 self.transformation_matrix = [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, -self.length, 0.0, 0.0],
+                    [0.0, -self.current_length, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 0.0],
                     [self.start_x, self.start_y, 0.0, 1.0],
                 ],
@@ -90,10 +92,10 @@ fn main() {
 
     implement_vertex!(Vertex, position);
 
-    let vertex1 = Vertex { position: [ 0.0,  0.1] };
+    let vertex1 = Vertex { position: [ 0.0,  0.05] };
     let vertex2 = Vertex { position: [ 0.0,  0.0] };
-    let vertex3 = Vertex { position: [ 0.1,  0.1] };
-    let vertex4 = Vertex { position: [ 0.1,  0.0] };
+    let vertex3 = Vertex { position: [ 0.05, 0.05] };
+    let vertex4 = Vertex { position: [ 0.05, 0.0] };
     let shape = vec![vertex1, vertex2, vertex3, vertex4];
 
     let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
@@ -141,7 +143,7 @@ fn main() {
     // Set the first forbornacci stuff
     let mut length = 1.0;
     let mut direction = Direction::Down;
-    let first_line = Line::new(0.0, 0.0, 0.0, direction, shape, matrix);
+    let first_line = Line::new(0.0, length, 0.0, 0.0, direction, shape, matrix);
     let mut lines = vec![ first_line ];
 
     // Main game loop
@@ -164,20 +166,53 @@ fn main() {
         
         target.finish().unwrap();
 
-      
-
-
-
         //Check top line length and if new one is to be added
-        if lines[ top_index ].length > length {
+        if lines[ top_index ].current_length > lines[ top_index ].final_length {
             // Calculate forbornacci stuff
-            length = lines[ top_index ].length * 1.2; // TODO: Use 2 latest lenghts instead
+            let new_length = lines[ top_index ].final_length * 1.2; // TODO: Use 2 latest lenghts instead
+            
+            // Calculate new start position
+            let prev_start_pos_x = lines[ top_index ].start_x;
+            let prev_start_pos_y = lines[ top_index ].start_y;
+            
+            let prev_length = lines[ top_index ].final_length;
+            let mut new_start_pos_x = 0.0;
+            let mut new_start_pos_y = 0.0;
+            
+            {
+                let prev_direction = & lines[ top_index ].direction;
+                match *prev_direction {
+                    Direction::Left => 
+                        {
+                            // DOWN
+                            new_start_pos_x = prev_start_pos_x - (prev_length / 10.0 / 2.0);
+                            new_start_pos_y = prev_start_pos_y;
+                        }
+                    Direction::Up => 
+                        {
+                            // LEFT
+                            new_start_pos_x = prev_start_pos_x;
+                            new_start_pos_y = prev_start_pos_y + (prev_length / 10.0 / 2.0);
+                        }
+                    Direction::Right => 
+                        {
+                            // UP
+                            new_start_pos_x = prev_start_pos_x + (prev_length / 10.0 / 2.0);
+                            new_start_pos_y = prev_start_pos_y;
+                        }
+                    Direction::Down => 
+                        {
+                            // RIGHT
+                            new_start_pos_x = prev_start_pos_x;
+                            new_start_pos_y = prev_start_pos_y - (prev_length / 10.0 / 2.0);
+                        }
+                } 
+            }
             
             // Choose new direction
             direction = select_new_direction(&mut lines[ top_index ].direction);
-   
             
-            let new_line = Line::new(0.0, 0.0, 0.0, direction, lines[ top_index ].verticies.clone(), matrix);
+            let new_line = Line::new(0.0, new_length, new_start_pos_x, new_start_pos_y, direction, lines[ top_index ].verticies.clone(), matrix);
             lines.push(new_line)
         }
 
@@ -194,7 +229,7 @@ fn main() {
 fn select_new_direction(direction: &mut Direction) -> Direction {
     match *direction {
         Direction::Left => 
-                return Direction::Down,
+            return Direction::Down,
         Direction::Up => 
             return Direction::Left,
         Direction::Right => 
